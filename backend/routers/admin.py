@@ -170,3 +170,19 @@ async def admin_upsert_knowledge_base(
     from backend.services.pinecone_service import upsert_documents
     await upsert_documents([d.model_dump() for d in docs])
     return {"success": True, "upserted": len(docs)}
+
+
+@router.post("/knowledge-base/scrape-blog")
+async def admin_scrape_blog(
+    _: str = Depends(get_current_admin),
+):
+    """Scrape Oleg's blog and upsert all posts into Pinecone."""
+    from backend.scripts.scrape_blog import scrape_all
+    from backend.services.pinecone_service import upsert_documents
+    docs = await scrape_all(verbose=False)
+    if not docs:
+        return {"success": False, "error": "No content extracted — blog may be client-side rendered"}
+    batch_size = 50
+    for i in range(0, len(docs), batch_size):
+        await upsert_documents(docs[i : i + batch_size])
+    return {"success": True, "chunks": len(docs)}
