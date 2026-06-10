@@ -16,18 +16,35 @@ from backend.services.redis_cache import close as close_redis
 settings = get_settings()
 
 
+def _pg_conninfo() -> str:
+    """Return a psycopg-compatible connection string (no driver prefix)."""
+    url = settings.database_url
+    for prefix in ("postgresql+asyncpg://", "postgres+asyncpg://"):
+        if url.startswith(prefix):
+            return "postgresql://" + url[len(prefix):]
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://"):]
+    return url
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     ensure_index()
 
-    # LangGraph graph with in-memory checkpointer
-    # For production, swap MemorySaver for AsyncPostgresSaver or AsyncRedisSaver
-    from langgraph.checkpoint.memory import MemorySaver
-    checkpointer = MemorySaver()
-    app.state.graph = build_graph(checkpointer=checkpointer)
+    from psycopg_pool import AsyncConnectionPool
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-    yield
+    async with AsyncConnectionPool(
+        conninfo=_pg_conninfo(),
+        max_size=10,
+        kwargs={"autocommit": True},
+    ) as pool:
+        checkpointer = AsyncPostgresSaver(pool)
+        await checkpointer.setup()  # creates checkpoint tables if not exist
+        app.state.graph = build_graph(checkpointer=checkpointer)
+
+        yield
 
     await close_redis()
 
