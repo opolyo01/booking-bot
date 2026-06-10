@@ -131,14 +131,18 @@ async def eval_booking_multiturn_consulting(client: httpx.AsyncClient) -> EvalRe
     if not t3_ok:
         passed = False
 
-    # Turn 4: pick first slot-like option
+    # Turn 4: pick slot — bot may propose closest slot and ask "does that work?"
     r4 = await chat(client, "Let's do 10am", sid)
-    t4_ok = any(w in r4["message"].lower() for w in ["name", "email", "confirm", "detail"])
-    turns.append(Turn("Let's do 10am", r4["message"], t4_ok, "should ask for name/email"))
+    t4_ok = any(w in r4["message"].lower() for w in
+                ["name", "email", "confirm", "detail", "work", "slot", "closest"])
+    turns.append(Turn("Let's do 10am", r4["message"], t4_ok, "should confirm slot or ask details"))
     if not t4_ok:
         passed = False
 
-    # Turn 5: provide details
+    # Turn 5: confirm slot if needed, then provide details
+    if any(w in r4["message"].lower() for w in ["work", "closest", "does that"]):
+        await chat(client, "yes that works", sid)
+
     r5 = await chat(client, "My name is Test User and email is test@example.com", sid)
     t5_ok = any(w in r5["message"].lower() for w in
                 ["confirm", "booked", "✅", "email", "calendar", "details"])
@@ -200,10 +204,16 @@ async def eval_booking_multiturn_training(client: httpx.AsyncClient) -> EvalResu
         passed = False
 
     r3 = await chat(client, "2pm is perfect", sid)
-    t3_ok = any(w in r3["message"].lower() for w in ["name", "email", "confirm"])
+    # Bot may propose closest slot ("2:30 available, does that work?") — accept that
+    t3_ok = any(w in r3["message"].lower() for w in
+                ["name", "email", "confirm", "work", "slot", "closest", "available"])
     turns.append(Turn("2pm is perfect", r3["message"], t3_ok))
     if not t3_ok:
         passed = False
+
+    # Confirm slot if bot is still asking, then give name+email
+    if any(w in r3["message"].lower() for w in ["work", "closest", "does that"]):
+        await chat(client, "yes that works", sid)
 
     r4 = await chat(client, "Bob Chen, bob@startup.io", sid)
     t4_ok = any(w in r4["message"].lower() for w in ["confirm", "booked", "✅", "email"])

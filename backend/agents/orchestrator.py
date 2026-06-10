@@ -75,7 +75,10 @@ async def orchestrator_node(state: ConversationState) -> dict[str, Any]:
                            "like to book", "like to schedule", "want a session",
                            "book a session", "schedule a session", "set up a",
                            "arrange a", "organize a meeting", "invite oleg",
-                           "have oleg", "want oleg to")
+                           "have oleg", "want oleg to", "discuss a job",
+                           "job opportunity", "job offer", "reach out about",
+                           "want to discuss", "want to talk", "want to meet",
+                           "get on a call", "hop on a call")
         if any(sig in lower for sig in booking_signals):
             intent = "book"
 
