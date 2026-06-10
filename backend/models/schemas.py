@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from backend.db.models import BookingStatus, MeetingTypeEnum
 
@@ -13,6 +13,13 @@ class ChatMessageIn(BaseModel):
     message: str
     channel: str = "web"  # "web" | "voice"
     timezone: Optional[str] = None
+
+    @field_validator("message")
+    @classmethod
+    def message_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("message must not be empty")
+        return v
 
 
 class ChatMessageOut(BaseModel):
