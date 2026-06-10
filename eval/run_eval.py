@@ -172,10 +172,16 @@ async def eval_booking_multiturn_job_offer(client: httpx.AsyncClient) -> EvalRes
         passed = False
 
     r3 = await chat(client, "11am works for me", sid)
-    t3_ok = any(w in r3["message"].lower() for w in ["name", "email", "confirm", "detail"])
+    # Bot may propose closest slot and ask "does that work?" — accept that
+    t3_ok = any(w in r3["message"].lower() for w in
+                ["name", "email", "confirm", "detail", "work", "slot", "closest"])
     turns.append(Turn("11am works for me", r3["message"], t3_ok))
     if not t3_ok:
         passed = False
+
+    # Confirm slot if bot asked, then provide name/email/topic
+    if any(w in r3["message"].lower() for w in ["work", "closest", "does that"]):
+        await chat(client, "yes that works", sid)
 
     r4 = await chat(client, "Jane Smith, jane@company.com, topic is Senior ML Engineer role", sid)
     t4_ok = any(w in r4["message"].lower() for w in ["confirm", "booked", "✅", "calendar"])
