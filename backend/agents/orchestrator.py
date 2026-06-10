@@ -39,6 +39,13 @@ async def orchestrator_node(state: ConversationState) -> dict[str, Any]:
     if not last_human:
         return {"intent": "unknown"}
 
+    # Skip LLM routing mid-flow — follow-up messages never change intent.
+    # Only an explicit cancel keyword breaks out of an active booking flow.
+    if state.get("intent") == "book":
+        if any(w in last_human.content.lower() for w in ("cancel", "cancell")):
+            return {"intent": "cancel"}
+        return {"intent": "book"}
+
     messages = [
         SystemMessage(content=ORCHESTRATOR_SYSTEM),
         HumanMessage(content=last_human.content),
