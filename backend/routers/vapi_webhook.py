@@ -170,7 +170,10 @@ async def vapi_custom_llm(request: Request):
         "user_timezone": "UTC",
     }
 
-    if payload.get("stream", False):
+    stream = payload.get("stream", False)
+    logger.info("Vapi request: session=%s stream=%s", session_id, stream)
+
+    if stream:
         async def event_stream():
             streamed_any = False
             role_sent = False
