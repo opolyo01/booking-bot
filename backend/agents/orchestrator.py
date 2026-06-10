@@ -59,12 +59,25 @@ async def orchestrator_node(state: ConversationState) -> dict[str, Any]:
     # Fallback: keyword scan if model didn't follow instructions
     if intent not in ("book", "faq", "cancel"):
         lower = last_human.content.lower()
-        if any(w in lower for w in ("book", "schedule", "meeting", "appointment")):
+        if any(w in lower for w in ("book", "schedule", "meeting", "appointment",
+                                     "session", "slot", "reserve", "availability")):
             intent = "book"
         elif any(w in lower for w in ("cancel", "cancell")):
             intent = "cancel"
         else:
             intent = "faq"
+
+    # Also catch "interested in a <type> session/meeting" phrasing that the LLM
+    # may classify as FAQ — they are booking intents.
+    if intent == "faq":
+        lower = last_human.content.lower()
+        booking_signals = ("interested in a", "want to book", "want to schedule",
+                           "like to book", "like to schedule", "want a session",
+                           "book a session", "schedule a session", "set up a",
+                           "arrange a", "organize a meeting", "invite oleg",
+                           "have oleg", "want oleg to")
+        if any(sig in lower for sig in booking_signals):
+            intent = "book"
 
     # Preserve booking intent mid-flow — follow-up messages (dates, names, slot
     # confirmations) won't contain booking keywords and get mis-routed to faq.
