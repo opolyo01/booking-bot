@@ -10,7 +10,7 @@ class ConversationState(TypedDict):
     channel: Literal["web", "voice"]
 
     # Classified intent for the current conversation turn
-    intent: Optional[Literal["book", "faq", "cancel", "unknown"]]
+    intent: Optional[Literal["book", "faq", "cancel", "reschedule", "unknown"]]
 
     # Collected booking info
     user_name: Optional[str]

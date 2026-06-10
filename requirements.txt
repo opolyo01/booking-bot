@@ -42,5 +42,8 @@ resend==2.5.1
 # Auth
 python-jose[cryptography]==3.3.0
 
+# Background scheduler (reminder emails)
+apscheduler>=3.10.0
+
 # HTTP client
 httpx==0.28.1

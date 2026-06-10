@@ -90,3 +90,11 @@ class MeetingTypeConfigUpdate(BaseModel):
     duration_minutes: int
     description: Optional[str] = None
     is_active: bool = True
+
+
+# ── Knowledge base ────────────────────────────────────────────────────────────
+
+class KnowledgeBaseDocIn(BaseModel):
+    id: str
+    text: str
+    metadata: dict = {}

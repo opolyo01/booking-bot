@@ -9,6 +9,7 @@ from backend.db.database import get_db
 from backend.db.models import BookingStatus, MeetingTypeConfig, MeetingTypeEnum, OfficeHours
 from backend.models.schemas import (
     BookingOut,
+    KnowledgeBaseDocIn,
     MeetingTypeConfigOut,
     MeetingTypeConfigUpdate,
     OfficeHoursOut,
@@ -145,3 +146,27 @@ async def admin_update_meeting_type(
     await db.commit()
     await db.refresh(config)
     return config
+
+
+# ── Knowledge base ────────────────────────────────────────────────────────────
+
+@router.post("/knowledge-base/seed")
+async def admin_seed_knowledge_base(
+    _: str = Depends(get_current_admin),
+):
+    """Re-seed Pinecone with the built-in document set from seed_knowledge_base.py."""
+    from backend.scripts.seed_knowledge_base import DOCUMENTS
+    from backend.services.pinecone_service import upsert_documents
+    await upsert_documents(DOCUMENTS)
+    return {"success": True, "seeded": len(DOCUMENTS)}
+
+
+@router.post("/knowledge-base/upsert")
+async def admin_upsert_knowledge_base(
+    docs: list[KnowledgeBaseDocIn],
+    _: str = Depends(get_current_admin),
+):
+    """Upsert custom documents into the knowledge base."""
+    from backend.services.pinecone_service import upsert_documents
+    await upsert_documents([d.model_dump() for d in docs])
+    return {"success": True, "upserted": len(docs)}

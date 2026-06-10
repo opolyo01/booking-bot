@@ -5,10 +5,10 @@ import type { ChatMessage } from "@/types";
 
 function getSessionId(): string {
   const key = "booking_session_id";
-  let id = sessionStorage.getItem(key);
+  let id = localStorage.getItem(key);
   if (!id) {
     id = uuidv4();
-    sessionStorage.setItem(key, id);
+    localStorage.setItem(key, id);
   }
   return id;
 }

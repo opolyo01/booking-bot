@@ -127,11 +127,21 @@ async def _attempt_direct_booking(
     if "booking_id" not in data:
         return None
 
+    from datetime import datetime as _dt
+    import zoneinfo as _zi
+    tz_name = state.get("user_timezone") or "UTC"
+    try:
+        tz = _zi.ZoneInfo(tz_name)
+        local_dt = _dt.fromisoformat(details.slot_start_utc).astimezone(tz)
+        time_display = local_dt.strftime("%A, %B %-d at %-I:%M %p") + f" ({tz_name})"
+    except Exception:
+        time_display = details.slot_start_utc + " (UTC)"
+
     msg = AIMessage(content=(
         f"Your booking is confirmed! ✅\n\n"
         f"- **Name:** {details.name}\n"
         f"- **Meeting:** {details.meeting_type.replace('_', ' ').title()}\n"
-        f"- **Time (UTC):** {details.slot_start_utc}\n"
+        f"- **Time:** {time_display}\n"
         f"- **Topic:** {details.topic or '—'}\n\n"
         f"A confirmation email with a calendar invite is on its way to **{details.email}**. "
         f"You can cancel any time using the link in that email."
@@ -195,7 +205,7 @@ async def booking_agent_node(state: ConversationState) -> dict[str, Any]:
     channel = state.get("channel", "web")
     system = BOOKING_SYSTEM + f"\n\nToday's date is {today_str} (UTC). Use this to resolve relative dates like 'next Monday', 'this Friday', 'tomorrow', etc. Always convert relative dates to YYYY-MM-DD before calling get_available_slots."
     if channel == "voice":
-        system += "\n\nIMPORTANT: Keep all responses under 40 words for voice readability."
+        system += "\n\nIMPORTANT: Keep all responses under 60 words for voice readability."
 
     response = await _llm.ainvoke([SystemMessage(content=system)] + messages_list)
     return {"messages": [response]}

@@ -138,4 +138,11 @@ async def cancel_booking_by_token(cancel_token: str) -> str:
         await resend_email.send_cancellation_confirmation(booking.email, booking.name)
 
     await redis_cache.invalidate_slots(booking.start_time.strftime("%Y-%m-%d"))
-    return json.dumps({"success": True, "booking_id": booking_id})
+    return json.dumps({
+        "success": True,
+        "booking_id": booking_id,
+        "name": booking.name,
+        "email": booking.email,
+        "meeting_type": booking.meeting_type.value,
+        "old_start": booking.start_time.isoformat(),
+    })

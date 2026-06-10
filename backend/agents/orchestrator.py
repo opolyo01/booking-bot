@@ -16,11 +16,17 @@ from backend.agents.cancellation_agent import (
 )
 from backend.agents.prompts import ORCHESTRATOR_SYSTEM
 from backend.agents.rag_agent import rag_agent_node, rag_should_continue
+from backend.agents.reschedule_agent import (
+    reschedule_agent_node,
+    reschedule_should_continue,
+)
 from backend.agents.state import ConversationState
 from backend.core.config import get_settings
 from backend.tools.availability_tools import get_available_slots
 from backend.tools.booking_tools import cancel_booking_by_token, confirm_booking
 from backend.tools.rag_tools import search_knowledge_base
+
+_RESCHEDULE_TOOLS = [cancel_booking_by_token, get_available_slots]
 
 settings = get_settings()
 
@@ -40,11 +46,15 @@ async def orchestrator_node(state: ConversationState) -> dict[str, Any]:
         return {"intent": "unknown"}
 
     # Skip LLM routing mid-flow — follow-up messages never change intent.
-    # Only an explicit cancel keyword breaks out of an active booking flow.
-    if state.get("intent") == "book":
-        if any(w in last_human.content.lower() for w in ("cancel", "cancell")):
+    # Only an explicit cancel/reschedule keyword breaks out of an active flow.
+    current_intent = state.get("intent")
+    if current_intent in ("book", "reschedule"):
+        lower = last_human.content.lower()
+        if any(w in lower for w in ("cancel", "cancell")):
             return {"intent": "cancel"}
-        return {"intent": "book"}
+        if current_intent == "book" and any(w in lower for w in ("reschedule", "move", "change my booking", "different time")):
+            return {"intent": "reschedule"}
+        return {"intent": current_intent}
 
     messages = [
         SystemMessage(content=ORCHESTRATOR_SYSTEM),
@@ -89,11 +99,13 @@ async def orchestrator_node(state: ConversationState) -> dict[str, Any]:
         if any(sig in lower for sig in booking_signals):
             intent = "book"
 
-    # Preserve booking intent mid-flow — follow-up messages (dates, names, slot
-    # confirmations) won't contain booking keywords and get mis-routed to faq.
-    # Only an explicit cancel breaks out of an active booking conversation.
-    if state.get("intent") == "book" and intent != "cancel":
+    # Preserve active intent mid-flow for follow-up messages.
+    # Only explicit cancel/reschedule breaks out.
+    prior = state.get("intent")
+    if prior == "book" and intent not in ("cancel", "reschedule"):
         intent = "book"
+    elif prior == "reschedule" and intent != "cancel":
+        intent = "reschedule"
 
     return {"intent": intent}
 
@@ -106,6 +118,8 @@ def route_after_orchestrator(state: ConversationState) -> str:
         return "rag"
     if intent == "cancel":
         return "cancellation"
+    if intent == "reschedule":
+        return "reschedule"
     return "rag"  # default: treat unknown as FAQ
 
 
@@ -126,13 +140,15 @@ def build_graph(checkpointer=None):
         "cancellation_tools",
         ToolNode([cancel_booking_by_token]),
     )
+    workflow.add_node("reschedule", reschedule_agent_node)
+    workflow.add_node("reschedule_tools", ToolNode(_RESCHEDULE_TOOLS))
 
     # Edges
     workflow.add_edge(START, "orchestrator")
     workflow.add_conditional_edges(
         "orchestrator",
         route_after_orchestrator,
-        {"booking": "booking", "rag": "rag", "cancellation": "cancellation"},
+        {"booking": "booking", "rag": "rag", "cancellation": "cancellation", "reschedule": "reschedule"},
     )
 
     # Booking sub-loop
@@ -158,5 +174,13 @@ def build_graph(checkpointer=None):
         {"cancellation_tools": "cancellation_tools", "__end__": END},
     )
     workflow.add_edge("cancellation_tools", "cancellation")
+
+    # Reschedule sub-loop
+    workflow.add_conditional_edges(
+        "reschedule",
+        reschedule_should_continue,
+        {"reschedule_tools": "reschedule_tools", "__end__": END},
+    )
+    workflow.add_edge("reschedule_tools", "reschedule")
 
     return workflow.compile(checkpointer=checkpointer)

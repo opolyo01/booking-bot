@@ -24,7 +24,7 @@ async def cancellation_agent_node(state: ConversationState) -> dict[str, Any]:
     channel = state.get("channel", "web")
     system = CANCELLATION_SYSTEM
     if channel == "voice":
-        system += "\n\nIMPORTANT: Keep all responses under 40 words for voice readability."
+        system += "\n\nIMPORTANT: Keep all responses under 60 words for voice readability."
 
     messages = [SystemMessage(content=system)] + list(state["messages"])
     response = await _llm.ainvoke(messages)

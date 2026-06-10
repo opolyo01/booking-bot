@@ -54,6 +54,41 @@ async def send_booking_confirmation(
         logger.warning("Failed to send confirmation email to %s: %s", to_email, e)
 
 
+async def send_reminder_email(
+    to_email: str,
+    name: str,
+    meeting_type: str,
+    start_time_str: str,
+    cancel_token: str,
+) -> None:
+    label = meeting_type.replace("_", " ").title()
+
+    def _sync():
+        resend.Emails.send({
+            "from": settings.from_email,
+            "to": [to_email],
+            "subject": f"Reminder: {label} with Oleg tomorrow",
+            "html": f"""
+            <h2>Meeting reminder</h2>
+            <p>Hi {name},</p>
+            <p>This is a reminder that your <strong>{label}</strong> meeting with Oleg
+               is scheduled for <strong>{start_time_str}</strong>.</p>
+            <p>You'll receive a Google Meet / Calendar link if one was added.</p>
+            <hr/>
+            <p style="font-size:12px;color:#666;">
+              Need to cancel?
+              <a href="{_cancel_url(cancel_token)}">Click here</a>.
+            </p>
+            """,
+        })
+
+    try:
+        await asyncio.to_thread(_sync)
+        logger.info("Reminder email sent to %s", to_email)
+    except Exception as e:
+        logger.warning("Failed to send reminder email to %s: %s", to_email, e)
+
+
 async def send_cancellation_confirmation(to_email: str, name: str) -> None:
     def _sync():
         resend.Emails.send({

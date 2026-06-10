@@ -56,6 +56,19 @@ async def save_session_state(session_id: str, state: dict) -> None:
     )
 
 
+# Reminder tracking — prevent duplicate reminder emails
+_REMINDER_TTL = 7 * 24 * 3600  # 7 days
+_REMINDER_PREFIX = "reminder_sent:"
+
+
+async def was_reminder_sent(booking_id: str) -> bool:
+    return bool(await get_redis().get(f"{_REMINDER_PREFIX}{booking_id}"))
+
+
+async def mark_reminder_sent(booking_id: str) -> None:
+    await get_redis().setex(f"{_REMINDER_PREFIX}{booking_id}", _REMINDER_TTL, "1")
+
+
 async def close() -> None:
     global _client
     if _client:
