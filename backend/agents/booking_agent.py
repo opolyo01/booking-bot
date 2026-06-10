@@ -189,8 +189,11 @@ async def booking_agent_node(state: ConversationState) -> dict[str, Any]:
                     return result
 
     # Regular LLM conversation turn (collects missing info or shows slots)
+    from datetime import datetime, timezone as _tz
+    today_str = datetime.now(_tz.utc).strftime("%A, %B %d, %Y")
+
     channel = state.get("channel", "web")
-    system = BOOKING_SYSTEM
+    system = BOOKING_SYSTEM + f"\n\nToday's date is {today_str} (UTC). Use this to resolve relative dates like 'next Monday', 'this Friday', 'tomorrow', etc. Always convert relative dates to YYYY-MM-DD before calling get_available_slots."
     if channel == "voice":
         system += "\n\nIMPORTANT: Keep all responses under 40 words for voice readability."
 
