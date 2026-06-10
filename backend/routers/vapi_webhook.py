@@ -81,7 +81,8 @@ async def vapi_custom_llm(request: Request):
 
                 # Capture final message for direct-booking path (no LLM tokens emitted)
                 if kind == "on_chain_end" and meta.get("langgraph_node") in _AGENT_NODES:
-                    output = event["data"].get("output") or {}
+                    data = event.get("data")
+                    output = data.get("output") if isinstance(data, dict) else None
                     msgs = list(output.get("messages", []) if isinstance(output, dict) else [])
                     for msg in reversed(msgs):
                         if (
