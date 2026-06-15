@@ -8,6 +8,7 @@ export default defineConfig({
     alias: { "@": path.resolve(__dirname, "./src") },
   },
   server: {
+    port: 5174,
     proxy: {
       "/api": {
         target: process.env.VITE_API_URL || "http://localhost:8000",

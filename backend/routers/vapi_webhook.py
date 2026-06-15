@@ -131,7 +131,7 @@ async def vapi_custom_llm(request: Request):
     raw_body = await request.body()
 
     sig = request.headers.get("x-vapi-secret", "")
-    if sig and not _verify_signature(raw_body, sig):
+    if not sig or not _verify_signature(raw_body, sig):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     payload = json.loads(raw_body)

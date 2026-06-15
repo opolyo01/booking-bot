@@ -96,7 +96,9 @@ async def eval_faq_unknown(client: httpx.AsyncClient) -> EvalResult:
     # Should admit it doesn't know — any hedge/disclaimer counts
     ok = any(w in bot for w in ["don't know", "don't have", "not sure", "can't find",
                                  "information", "unable", "sorry", "no details",
-                                 "not something", "not available", "not in"])
+                                 "not something", "not available", "not in",
+                                 "doesn't cover", "not cover", "knowledge base doesn't",
+                                 "don't cover", "not included"])
     return EvalResult("FAQ — unknown question (no hallucination)", "faq", ok, turns=[
         Turn("What is Oleg's favorite pizza topping?", resp["message"], ok,
              "should admit it doesn't know")
