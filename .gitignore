@@ -37,3 +37,4 @@ Thumbs.db
 # Alembic generated
 backend/alembic/versions/*.py
 !backend/alembic/versions/.gitkeep
+.gmail_token.json
