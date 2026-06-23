@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.agents.orchestrator import build_graph
 from backend.core.config import get_settings
 from backend.db.init_db import init_db
-from backend.routers import admin, auth, booking, vapi_webhook
+from backend.routers import admin, auth, booking, gmail, vapi_webhook
 from backend.services.pinecone_service import ensure_index
 from backend.services.redis_cache import close as close_redis
 
@@ -106,6 +106,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(booking.router)
 app.include_router(admin.router)
+app.include_router(gmail.router)
 app.include_router(vapi_webhook.router)
 
 

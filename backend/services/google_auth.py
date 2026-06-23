@@ -15,6 +15,7 @@ settings = get_settings()
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/gmail.modify",
     "openid",
     "email",
 ]
