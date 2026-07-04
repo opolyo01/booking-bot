@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-from backend.agents.booking_agent import _attempt_direct_booking, _extract_booking_details, _slots_were_shown
+from backend.agents.booking_agent import _attempt_direct_booking, _extract_booking_details, _slot_is_available
 from backend.agents.prompts import RESCHEDULE_SYSTEM
 from backend.agents.state import ConversationState
 from backend.core.config import get_settings
@@ -39,10 +39,16 @@ async def reschedule_agent_node(state: ConversationState) -> dict[str, Any]:
 
     # After cancel + slot confirmation, try to auto-book
     details = await _extract_booking_details(messages_list)
-    if details and details.has_all_info and _slots_were_shown(messages_list):
-        result = await _attempt_direct_booking(details, state)
-        if result:
-            return result
+    if details and details.has_all_info:
+        try:
+            available = await _slot_is_available(details.slot_start_utc, details.meeting_type)
+        except Exception:
+            available = False
+
+        if available:
+            result = await _attempt_direct_booking(details, state)
+            if result:
+                return result
 
     from datetime import datetime, timezone as _tz
     today_str = datetime.now(_tz.utc).strftime("%A, %B %d, %Y")

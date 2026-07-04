@@ -102,13 +102,6 @@ For slot_start_utc always include both date AND time (not midnight unless user s
         return None
 
 
-def _slots_were_shown(messages: list) -> bool:
-    return any(
-        isinstance(m, ToolMessage) and '"start"' in (m.content or "")
-        for m in messages
-    )
-
-
 # ── Main node ─────────────────────────────────────────────────────────────────
 
 async def _attempt_direct_booking(
@@ -181,22 +174,19 @@ async def booking_agent_node(state: ConversationState) -> dict[str, Any]:
     details = await _extract_booking_details(messages_list)
 
     if details and details.has_all_info:
-        if _slots_were_shown(messages_list):
-            # Slots were already shown — book immediately
+        # Always re-verify the specific requested slot right before booking.
+        # A slot list shown earlier in the conversation — possibly for a
+        # different date entirely — must never be trusted as proof that
+        # *this* slot is still open.
+        try:
+            available = await _slot_is_available(details.slot_start_utc, details.meeting_type)
+        except Exception:
+            available = False
+
+        if available:
             result = await _attempt_direct_booking(details, state)
             if result:
                 return result
-        else:
-            # One-shot: user gave everything upfront — verify slot then book
-            try:
-                available = await _slot_is_available(details.slot_start_utc, details.meeting_type)
-            except Exception:
-                available = False
-
-            if available:
-                result = await _attempt_direct_booking(details, state)
-                if result:
-                    return result
 
     # Regular LLM conversation turn (collects missing info or shows slots)
     from datetime import datetime, timezone as _tz
